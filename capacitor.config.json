@@ -1,0 +1,6 @@
+{
+  "appId": "app.khanedar.home",
+  "appName": "خانه‌دار",
+  "webDir": "www",
+  "android": { "allowMixedContent": false }
+}
