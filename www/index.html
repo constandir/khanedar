@@ -1015,23 +1015,16 @@ V.tasks=function(){
 V.shop=function(){
   if(!S.shops.length)return '<div class="empty">لیستی نیست.</div><button class="btn primary" data-act="new-list">لیست جدید</button>';
   var L=S.shops.find(function(l){return l.id===ui.shop})||S.shops[0];ui.shop=L.id;
-  var pend=L.items.filter(function(i){return !i.done}),got=L.items.filter(function(i){return i.done}),grouped=S.settings.shopGroup!==false;
+  var pend=L.items.filter(function(i){return !i.done}),got=L.items.filter(function(i){return i.done});
   var sum=function(a){return a.reduce(function(s,i){return s+(i.price||0)*(i.qty||1)},0)};
-  var inList={};L.items.forEach(function(i){if(!i.done)inList[i.name]=1});
-  var sug=Object.keys(S.freq||{}).filter(function(n){return !inList[n]}).sort(function(a,b){return S.freq[b]-S.freq[a]}).slice(0,8);
-  var names={};S.shops.forEach(function(l){l.items.forEach(function(i){names[i.name]=1})});Object.keys(S.freq||{}).forEach(function(n){names[n]=1});
   var row=function(i){var lp=!i.price&&!i.done?lastPrice(i.name):null;return '<div class="item'+(i.done?' done':'')+'"><input type="checkbox" style="width:22px;height:22px;accent-color:var(--accent);flex:none" data-chg="buy" data-id="'+i.id+'"'+(i.done?' checked':'')+' aria-label="خریده شد"><button class="name" data-act="edit-item" data-id="'+i.id+'">'+esc(i.name)+'</button><span class="qty">'+fa(i.qty)+' '+esc(i.unit)+(i.price?' · '+money(i.price*i.qty):'')+'</span></div>'};
-  var groups=[];
-  if(grouped){var map={};pend.forEach(function(i){var a=i.aisle||guessAisle(i.name);(map[a]=map[a]||[]).push(i)});groups=AISLES.filter(function(a){return map[a[0]]}).map(function(a){return {name:a[1],items:map[a[0]]}})}
   var pendHtml;
   if(!pend.length)pendHtml='<div class="empty">چیزی برای خرید نمانده.</div>';
-  else if(grouped&&groups.length>1)pendHtml=groups.map(function(g){return '<div class="grp"><span>'+esc(g.name)+'</span><span>'+fa(g.items.length)+'</span></div>'+g.items.map(row).join('')}).join('');
   else pendHtml=pend.map(row).join('');
   var h='<section><div class="sec-h"><h2>خرید</h2><button class="btn sm ghost" data-act="edit-list" data-id="'+L.id+'">ویرایش لیست</button></div>'
     +chipsRow(S.shops.map(function(l){return [l.id,l.name]}),L.id,'shoplist','<button class="chip" data-act="new-list">+ لیست جدید</button>')
-    +'<form class="inline-form" data-form="additem"><input type="text" name="name" list="sug-names" placeholder="چی لازم داری؟ مثلاً ۲ کیلو سیب" aria-label="نام کالا" autocomplete="off"><datalist id="sug-names">'+Object.keys(names).slice(0,80).map(function(n){return '<option value="'+esc(n)+'">'}).join('')+'</datalist><button class="btn primary" type="submit">افزودن</button></form>';
-  if(sug.length)h+='<div><div class="sub" style="margin-bottom:6px">پرتکرارها</div><div class="chips">'+sug.map(function(n){return '<button class="chip" data-act="sug" data-v="'+esc(n)+'">+ '+esc(n)+'</button>'}).join('')+'</div></div>';
-  h+='<div class="acts"><button class="chip sm" data-act="shop-group" aria-pressed="'+grouped+'">دسته‌بندی بر اساس بخش فروشگاه</button>'+(pend.length>1?'<button class="chip sm" data-act="buy-all">همه را خریدم</button>':'')+'</div>';
+    +'<form class="inline-form" data-form="additem"><input type="text" name="name" placeholder="چی لازم داری؟ مثلاً ۲ کیلو سیب" aria-label="نام کالا" autocomplete="off">'+'<button class="btn primary" type="submit">افزودن</button></form>';
+  h+='<div class="acts">'+(pend.length>1?'<button class="chip sm" data-act="buy-all">همه را خریدم</button>':'')+'</div>';
   h+='<div class="list">'+pendHtml+'</div>';
   h+='<div class="totals"><span>برآورد باقی‌مانده: <b>'+money(sum(pend))+'</b></span><span>خرج‌شده: <b>'+money(sum(got))+'</b></span></div>';
   if(got.length)h+='<div class="sec-h"><h2>خریداری‌شده</h2><span class="acts"><button class="btn sm primary" data-act="finish-shop">پایان خرید</button><button class="btn sm ghost" data-act="unbuy-all">لغو همه</button><button class="btn sm ghost" data-act="clear-bought">پاک کردن</button></span></div><div class="list">'+got.map(row).join('')+'</div>';
@@ -1305,7 +1298,6 @@ function itemSheet(L,i){
     +'<div class="two"><label class="fld"><span>تعداد یا مقدار</span>'+numInput('qty',i.qty,'dec')+'</label><label class="fld"><span>واحد</span><select name="unit">'+['عدد','کیلو','گرم','لیتر','بسته','جعبه'].map(function(u){return '<option'+(u===i.unit?' selected':'')+'>'+u+'</option>'}).join('')+'</select></label></div>'
     +'<div class="two"><label class="fld"><span>قیمت واحد (تومان)</span>'+numInput('price',i.price||0,'money')+'</label><label class="fld"><span>دسته</span><select name="cat">'+opts(S.cats,i.cat,'بدون دسته')+'</select></label></div>'
     +(lp&&lp.p?'<div class="sub">آخرین قیمت ثبت‌شده: '+money(lp.p)+' ('+fmtDate(lp.d)+')'+(lp.p!==i.price?' <button type="button" class="btn sm" data-act="use-lp" data-p="'+lp.p+'">استفاده</button>':'')+'</div>':'')
-    +'<label class="fld"><span>بخش فروشگاه</span><select name="aisle"><option value="">خودکار ('+esc(aisleName(ga))+')</option>'+AISLES.map(function(a){return '<option value="'+a[0]+'"'+(i.aisle===a[0]?' selected':'')+'>'+a[1]+'</option>'}).join('')+'</select></label>'
     +'<label class="fld"><span>یادداشت</span><input type="text" name="note" value="'+esc(i.note||'')+'"></label>'
     +'<button class="btn primary block" type="submit">ذخیره</button><button class="btn block danger" type="button" data-act="del-item" data-id="'+i.id+'">حذف</button></form>');
 }
@@ -1435,7 +1427,6 @@ var ACT={
     else if(k==='inc')incomeSheet(byId(S.incomes,id));
   },
   'done-ago':function(el){var t=byId(S.tasks,el.dataset.id),d=addDays(todayISO(),-(+el.dataset.n));closeSheet();if(doneOn(t,d)){toast('در این تاریخ قبلاً ثبت شده');return}snap();doComplete(t,d);commit();toast('انجام در '+fmtDate(d,{year:true})+' ثبت شد. موعد بعدی: '+fmtDate(t.due),true)},
-  'shop-group':function(){S.settings.shopGroup=S.settings.shopGroup===false;save();render()},
   'buy-all':function(){var L=curList();snap();L.items.forEach(function(i){if(!i.done)markBought(i,true)});commit();toast('همه خریده‌شده ثبت شد',true)},
   'unbuy-all':function(){var L=curList();snap();L.items.forEach(function(i){i.done=false});commit()},
   'use-lp':function(el){var f=el.closest('form');if(f&&f.elements.price){f.elements.price.value=fmtNumVal(+el.dataset.p,'money')}},
@@ -1521,7 +1512,6 @@ var ACT={
   'del-log':function(el){snap();S.logs=S.logs.filter(function(t){return t.id!==el.dataset.id});closeSheet();commit();toast('حذف شد',true)},
   'edit-item':function(el){var L=curList();itemSheet(L,byId(L.items,el.dataset.id))},
   'del-item':function(el){var L=curList();snap();L.items=L.items.filter(function(t){return t.id!==el.dataset.id});closeSheet();commit();toast('حذف شد',true)},
-  sug:function(el){var L=curList();snap();addItem(L,el.dataset.v,1,'عدد');commit()},
   'clear-bought':function(){closeSheet();var L=curList();snap();L.items=L.items.filter(function(i){return !i.done});commit();toast('خریداری‌شده‌ها پاک شد',true)},
   'new-list':function(){listSheet()},
   'finish-shop':function(){finishSheet()},
